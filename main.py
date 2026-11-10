@@ -27,6 +27,7 @@ CONFIG = {
     "dates": os.getenv("BMS_DATES", ""),          # comma-separated YYYYMMDD, empty = from URL
     "theatre": os.getenv("BMS_THEATRE", ""),       # substring filter, empty = all
     "time_period": os.getenv("BMS_TIME", ""),      # e.g. "evening,night", empty = all
+    "language": os.getenv("BMS_LANGUAGE", ""),     # e.g. "HINDI,TELUGU", empty = all
 }
 
 RESEND_API_KEY = os.getenv("RESEND_API_KEY", "")
@@ -266,7 +267,7 @@ def parse_shows(data):
 # ──────────────────────────────────────────────────────────────────────
 # FILTERING
 # ──────────────────────────────────────────────────────────────────────
-def filter_shows(shows, theatre_filter, time_periods, date_codes):
+def filter_shows(shows, theatre_filter, time_periods, date_codes, language_filter=""):
     result = []
     kws = [k.strip().lower() for k in theatre_filter.split(",")
            if k.strip()] if theatre_filter else []
@@ -274,12 +275,20 @@ def filter_shows(shows, theatre_filter, time_periods, date_codes):
                if p.strip()] if time_periods else []
     dates_set = set(d.strip() for d in date_codes.split(",")
                     if d.strip()) if date_codes else set()
+    langs = [l.strip().upper() for l in language_filter.split(",")
+             if l.strip()] if language_filter else []
 
     for s in shows:
         # Theatre filter
         if kws:
             name_lower = s.venue_name.lower()
             if not any(k in name_lower for k in kws):
+                continue
+
+        # Language filter (match against screen attributes)
+        if langs:
+            attr_upper = s.screen_attr.upper()
+            if not any(l in attr_upper for l in langs):
                 continue
 
         # Date filter
@@ -584,6 +593,7 @@ def main():
         CONFIG["theatre"],
         CONFIG["time_period"],
         CONFIG["dates"],
+        CONFIG["language"],
     )
     print(f"  📊 {len(filtered)} showtime(s) after filters")
 
